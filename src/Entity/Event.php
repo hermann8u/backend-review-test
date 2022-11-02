@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
-use Webmozart\Assert\Assert;
 
 /**
  * @ORM\Entity()
@@ -52,27 +51,53 @@ class Event
     /**
      * @ORM\Column(type="datetime_immutable", nullable=false)
      */
-    private \DateTimeImmutable $createAt;
+    private \DateTimeImmutable $createdAt;
 
     /**
      * @ORM\Column(type="text", nullable=true)
      */
     private ?string $comment;
 
-    public function __construct(int $id, string $type, Actor $actor, Repo $repo, array $payload, \DateTimeImmutable $createAt, ?string $comment)
-    {
+    /**
+     * @throws \InvalidArgumentException
+     */
+    public function __construct(
+        int $id,
+        string $type,
+        Actor $actor,
+        Repo $repo,
+        array $payload,
+        \DateTimeImmutable $createdAt,
+        ?string $comment,
+    ) {
         $this->id = $id;
         EventType::assertValidChoice($type);
         $this->type = $type;
         $this->actor = $actor;
         $this->repo = $repo;
         $this->payload = $payload;
-        $this->createAt = $createAt;
+        $this->createdAt = $createdAt;
         $this->comment = $comment;
 
         if ($type === EventType::COMMIT) {
             $this->count = $payload['size'] ?? 1;
         }
+    }
+
+    /**
+     * @throws \InvalidArgumentException
+     */
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            (int) $data['id'],
+            $data['type'],
+            Actor::fromArray($data['actor']),
+            Repo::fromArray($data['repo']),
+            $data['payload'],
+            new \DateTimeImmutable($data['created_at']),
+            $data['comment'] ?? null,
+        );
     }
 
     public function id(): int
@@ -100,13 +125,27 @@ class Event
         return $this->payload;
     }
 
-    public function createAt(): \DateTimeImmutable
+    public function createdAt(): \DateTimeImmutable
     {
-        return $this->createAt;
+        return $this->createdAt;
     }
 
-    public function getComment(): ?string
+    public function comment(): ?string
     {
         return $this->comment;
+    }
+
+    public function toArray(): array
+    {
+        return [
+            'id' => $this->id,
+            'type' => $this->type,
+            'count' => $this->count,
+            'actor_id' => $this->actor->id(),
+            'repo_id' => $this->repo->id(),
+            'payload' => json_encode($this->payload),
+            'created_at' => $this->createdAt->format('Y-m-d H:i:s'),
+            'comment' => $this->comment,
+        ];
     }
 }

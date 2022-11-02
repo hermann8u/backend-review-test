@@ -17,6 +17,11 @@ framework:
     php_errors:
         log: true
 
+    http_client:
+        scoped_clients:
+            gh_archive.client:
+                base_uri: '%gh_archive.base_uri%'
+
 when@test:
     framework:
         test: true
